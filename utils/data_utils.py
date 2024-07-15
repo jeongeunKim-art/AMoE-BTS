@@ -131,32 +131,38 @@ def get_loader(args):
     test_transform = transforms.Compose(
         [
             transforms.LoadImaged(keys=["image", "label"]),
-            transforms.AddChanneld(keys=["image", "label"]),
-            # transforms.ConvertToMultiChannelBasedOnBratsClassesd(keys="label"),
+            #transforms.AddChanneld(keys=["image", "label"]),
+            transforms.ConvertToMultiChannelBasedOnBratsClassesd(keys="label"),
             transforms.NormalizeIntensityd(keys="image", nonzero=True, channel_wise=True),
             transforms.ToTensord(keys=["image", "label"]),
         ]
     )
 
-    train_ds = data.Dataset(data=train_files, transform=train_transform)
+    if args.test_mode:
+        val_ds = data.Dataset(data=validation_files, transform=test_transform)
+        val_sampler = Sampler(val_ds, shuffle=False) if args.distributed else None
+        test_loader = data.DataLoader(
+            val_ds, batch_size=1, shuffle=False, num_workers=args.workers, sampler=val_sampler, pin_memory=True
+        )
 
-    train_sampler = Sampler(train_ds) if args.distributed else None
-    train_loader = data.DataLoader(train_ds,
-                                   batch_size=args.batch_size,
-                                   shuffle=(train_sampler is None),
-                                   num_workers=args.workers,
-                                   sampler=train_sampler,
-                                   pin_memory=True,
-                                   )
-    val_ds = data.Dataset(data=validation_files, transform=val_transform)
-    val_sampler = Sampler(val_ds, shuffle=False) if args.distributed else None
-    val_loader = data.DataLoader(val_ds,
-                                 batch_size=1,
-                                 shuffle=False,
-                                 num_workers=args.workers,
-                                 sampler=val_sampler,
-                                 pin_memory=True,
-                                 )
-    loader = [train_loader, val_loader]
+        loader = test_loader
+    else:
+        train_ds = data.Dataset(data=train_files, transform=train_transform)
+
+        train_sampler = Sampler(train_ds) if args.distributed else None
+        train_loader = data.DataLoader(
+            train_ds,
+            batch_size=args.batch_size,
+            shuffle=(train_sampler is None),
+            num_workers=args.workers,
+            sampler=train_sampler,
+            pin_memory=True,
+        )
+        val_ds = data.Dataset(data=validation_files, transform=val_transform)
+        val_sampler = Sampler(val_ds, shuffle=False) if args.distributed else None
+        val_loader = data.DataLoader(
+            val_ds, batch_size=1, shuffle=False, num_workers=args.workers, sampler=val_sampler, pin_memory=True
+        )
+        loader = [train_loader, val_loader]
 
     return loader
