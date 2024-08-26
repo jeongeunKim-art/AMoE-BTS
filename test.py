@@ -24,14 +24,15 @@ from monai.metrics.utils import do_metric_reduction
 from monai.utils.enums import MetricReduction
 from medical.optimizers.lr_scheduler import LinearWarmupCosineAnnealingLR
 from monai.losses.dice import DiceLoss
-from monai.networks.nets import SwinUNETR
+from medical.model.nested_former import NestedFormer
+from medical.model.encoder.global_poolformer import moe_gating
 
 parser = argparse.ArgumentParser(description='Swin UNETR segmentation pipeline for BRATS Challenge')
 parser.add_argument('--model_name', default="swinunetr", help='the model will be trained')
 parser.add_argument('--checkpoint', default=None, help='start training from saved checkpoint')
 parser.add_argument('--logdir', default='test', type=str, help='directory to save the tensorboard logs')
 parser.add_argument('--fold', default=0, type=int, help='data fold')
-parser.add_argument('--pretrained_model_name', default='swinunetrmodel_final.pt', type=str, help='pretrained model name')
+parser.add_argument('--pretrained_model_name', default='19modelE7.pt', type=str, help='pretrained model name')
 parser.add_argument('--load_pretrain', action="store_true", help='pretrained model name')
 parser.add_argument('--data_dir', default='MICCAI_BraTS_2019_Data_Training', type=str, help='dataset directory')
 parser.add_argument('--json_list', default='./train19_data.json', type=str, help='dataset json file')
@@ -51,6 +52,8 @@ parser.add_argument('--dist-url', default='tcp://127.0.0.1:23456', type=str, hel
 parser.add_argument('--dist-backend', default='nccl', type=str, help='distributed backend')
 parser.add_argument('--norm_name', default='instance', type=str, help='normalization name')
 parser.add_argument('--workers', default=8, type=int, help='number of workers')
+parser.add_argument('--num_experts', default=7, type=int, help='number of experts')
+parser.add_argument('--top_k', default=5, type=int, help='number of experts')
 parser.add_argument('--feature_size', default=24, type=int, help='feature size')
 parser.add_argument('--in_channels', default=4, type=int, help='number of input channels')
 parser.add_argument('--out_channels', default=3, type=int, help='number of output channels')
@@ -131,12 +134,14 @@ def main_worker(gpu, args):
     pretrained_pth = os.path.join(pretrained_dir, model_name)
     inf_size = [args.roi_x, args.roi_y, args.roi_z]
 
-    model = SwinUNETR(
-        img_size=(128, 128, 128),
-        in_channels=4,
-        out_channels=3,
-        feature_size=24,
-        use_checkpoint=True,)
+    model = NestedFormer(model_num=args.in_channels,
+                         out_channels=args.out_channels,
+                         image_size=inf_size,
+                         window_size=(4, 4, 4),
+                         num_experts=args.num_experts,
+                         top_k=args.top_k
+                         )
+
 
     window_infer = SlidingWindowInferer(roi_size=inf_size,
                                         sw_batch_size=args.sw_batch_size,
@@ -276,17 +281,17 @@ def main_worker(gpu, args):
             for i, image in enumerate(images):
                 image_3d = image.cpu().numpy().astype(np.float32)  # 데이터 타입 변환
                 image_nii = nib.Nifti1Image(image_3d, np.eye(4))
-                nib.save(image_nii, f"predictions/swinunetr_image_{i}.nii.gz")
+                nib.save(image_nii, f"predictions/moeformerE7_image_{i}.nii.gz")
 
             for i, logit in enumerate(logits):
                 logit_3d = logit.cpu().numpy().astype(np.float32)  # 데이터 타입 변환
                 logit_nii = nib.Nifti1Image(logit_3d, np.eye(4))
-                nib.save(logit_nii, f"predictions/swinunetr_logit_{i}.nii.gz")
+                nib.save(logit_nii, f"predictions/moeformerE7_logit_{i}.nii.gz")
 
             for i, label in enumerate(labels):
                 label_3d = label.cpu().numpy().astype(np.float32)  # 데이터 타입 변환
                 label_nii = nib.Nifti1Image(label_3d, np.eye(4))
-                nib.save(label_nii, f"predictions/swinunetr_label_{i}.nii.gz")
+                nib.save(label_nii, f"predictions/moeformerE7_label_{i}.nii.gz")
 
     dice_metric = DiceMetric(include_background=True,
                              reduction=MetricReduction.MEAN_BATCH,
