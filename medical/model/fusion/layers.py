@@ -13,7 +13,7 @@ def get_config(in_channels=1,
                mlp_dim=256,
                num_heads=8,
                num_experts=8,
-               top_k=4,
+               top_k=5,
                window_size=(8, 8, 8)):
     config = ml_collections.ConfigDict()
 
