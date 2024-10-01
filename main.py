@@ -24,6 +24,7 @@ parser.add_argument('--pretrain_model_path', default='./model.pt', type=str, hel
 parser.add_argument('--load_pretrain', action="store_true", help='pretrained model name')
 parser.add_argument('--data_dir', default='MICCAI_BraTS2020_TrainingData', type=str, help='dataset directory')
 parser.add_argument('--json_list', default='./brats2020_datajson.json', type=str, help='dataset json file')
+parser.add_argument('--testjson_list', default='./test_data19.json', type=str, help='dataset json file')
 parser.add_argument('--max_epochs', default=300, type=int, help='max number of training epochs')
 parser.add_argument('--batch_size', default=1, type=int, help='number of batch size')
 parser.add_argument('--sw_batch_size', default=4, type=int, help='number of sliding window batch size')
