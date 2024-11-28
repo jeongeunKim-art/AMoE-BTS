@@ -4,7 +4,9 @@
 > [Jeongeun Kim],[Youngwan Jo], [Sunghyun Ahn], and [Sanghyun Park]<br>
 
 ## Overview
-<img src="overview.png" height="260px"/> 
+<div align="center">
+    <img src="overview.png" alt="Overview" height="400px" />
+</div>
  Accurate segmentation of brain tumors, especially gliomas, is essential for precise
  diagnosis and treatment planning. Multimodal magnetic resonance imaging scans (T1,
  T1ce, T2, and Flair) provide complementary information about the location, size, and
